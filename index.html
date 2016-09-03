@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Anders Nygård">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment.js"></script>
+<script src="https://code.jquery.com/jquery-3.1.0.js" integrity="sha256-slogkvB1K3VOkzAI8QITxV3VzpOnkeNVsKvtkYLMjfk=" crossorigin="anonymous"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<link rel="stylesheet" href="list.js.css">
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/list.js/1.2.0/list.min.js"></script>
+<script src="list.pagination.min.js"></script>
+
+<script>
+
+var options = { 
+	valueNames: [ 'varenummer', 'varetype', 'varenavn','pris', 'f_pris', 'diff', 'volum' ], 
+	page: 20, 
+	plugins: [ ListPagination({}) ]
+ };
+
+
+
+$.getJSON("/api/vin", function(data) {
+	var div = document.getElementById("dbinfo");
+	var txt = '<small>Sist oppdatert: '+data.data[0]["Datotid"]+' '+data.data[0]["antall"]+' varer</small>';
+	div.innerHTML = txt;
+});
+
+
+$.getJSON("/api/vin/products/types", function(data) {
+	var div = document.getElementById("varetyper");
+
+	var txt = '<select id=selvaretype onchange="loadProductsByType()"><option value=null></option selected><option value="Alle varetyper">Alle varetyper</option>';
+	data.data.forEach(function(row) {
+		txt += "<option value=\""+row.Varetype+"\">"+row.Varetype+" ("+row.antall+")</option>";		
+	});
+	txt += '</select>';
+
+	div.innerHTML=txt;
+});
+
+function loadProductsByType() {
+
+	document.getElementById("products").innerHTML="Henter data...";
+	var sel = document.getElementById("selvaretype").value;
+
+	var url;
+	if (sel != "Alle varetyper")
+		url = "/api/vin/products/"+sel;
+	else {
+		url = "/api/vin/products";
+	}
+	$.getJSON(url, function(data) {
+		var txt = "	<input class=search placeholder=Search /><table class='table table-striped table-hover table-condensed'><thead><tr>"+
+					"<th><button class=sort data-sort=varenummer>#</button></th>"+
+					"<th><button class=sort data-sort=varetype>Type</button></th>"+
+					"<th><button class=sort data-sort=varenavn>Navn</button></th>"+
+					"<th><button class=sort data-sort=pris>Pris</button></th>"+
+					"<th><button class=sort data-sort=f_pris>Førpris</button></th>"+
+					"<th><button class=sort data-sort=diff>Diff</button></th>"+
+					"<th><button class=sort data-sort=volum>Volum</button></th>"+
+					"</tr></thead><tbody class=list>";
+		var div = document.getElementById("products");
+		data.data.forEach(function(row) {
+			var diffClass;
+			var diff = Math.floor(row.pris-row.f_pris);
+			if (diff < -10) diffClass="diff bg-success";
+			if (diff > 10) diffClass="diff bg-danger";
+			
+			var butikk = "";
+			if (
+				row.Butikkategori == "Butikkategori 1" ||
+				row.Butikkategori == "Butikkategori 2" ||
+				row.Butikkategori == "Butikkategori 3" ||
+				row.Butikkategori == "Butikkategori 4" ||
+				row.Butikkategori == "Butikkategori 5" ||
+				row.Butikkategori == "Butikkategori 6")
+				butikk="*";
+
+			txt += 	"<tr><td class=varenummer><a href="+row.Vareurl+" target=_blank>"+row.Varenummer+"</a>"+butikk+
+					"</td><td class=varetype>"+row.Varetype+
+					"</td><td class=varenavn>"+row.Varenavn+
+					"</td><td class=pris>"+row.pris+
+					"</td><td class=f_pris>"+row.f_pris+
+					"</td><td class=\""+diffClass+"\">"+diff+
+					"</td><td class=volum>"+row.Volum+
+					"</td></tr>";
+		});
+		txt += "</tbody></table><ul class=pagination></ul>";
+		div.innerHTML = txt;	
+		var products = new List('products', options);
+	});
+}
+</script>
+
+<title>Vinbase</title>
+</head>
+
+<body>
+	<div class="container">
+		<div class="panel"><h3>Vin og slik</h3><div id=dbinfo></div></div>
+		<div id=varetyper></div>
+		<div id=products></div>
+	</div>
+	<footer class="navbar-default navbar-fixed-bottom">
+		<div class="container-fluid">
+		<span>&copy; copyright rny.no 2016</span>
+		</div>
+	</footer>
+
+
+</body>
+
+</html>
