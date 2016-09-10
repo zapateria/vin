@@ -11,12 +11,14 @@
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 <!-- Optional theme -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-<link rel="stylesheet" href="list.js.css">
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+<link rel="stylesheet" href="test.css">
+
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/1.2.0/list.min.js"></script>
 <script src="list.pagination.min.js"></script>
-
+<script src="https://code.highcharts.com"></script>
 <script>
 
 var options = { 
@@ -26,13 +28,13 @@ var options = {
  };
 
 
-
+/*
 $.getJSON("/api/vin", function(data) {
 	var div = document.getElementById("dbinfo");
 	var txt = '<small>Sist oppdatert: '+data.data[0]["Datotid"]+' <span class=badge>'+data.data[0]["antall"]+'</span> varer</small>';
 	div.innerHTML = txt;
 });
-
+*/
 
 $.getJSON("/api/vin/products/types", function(data) {
 	var div = document.getElementById("varetyper");
@@ -53,13 +55,12 @@ function loadDetails(varenummer) {
 
 
 	$.getJSON("/api/vin/product/"+varenummer, function(data) {
-		console.log(data);
-		txt += "<table><tr><td><img src=https://bilder.vinmonopolet.no/cache/300x300-0/"+data.data.Varenummer+"-1.jpg></td>";
+		txt += "<table class=table><tr><td><img src=https://bilder.vinmonopolet.no/cache/300x300-0/"+data.data.Varenummer+"-1.jpg></td>";
 		txt += "<td valign=top><div class='well well-sm'>";
 		txt += "<dl class='dl-horizontal'>";
 		txt += "<dt>Varenavn</dt><dd>"+data.data.Varenavn+"</dd>";
 		txt += "<dt>Varetype</dt><dd>"+data.data.Varetype+", "+data.data.Rastoff+", "+data.data.Alkohol+"% ABV</dd>";
-		txt += "<dt>Kjøp</dt><dd>"+data.data.Pris+" kr ("+data.data.Volum+"l) "+data.data.Produktutvalg+" "+data.data.Butikkategori+"</dd>";
+		txt += "<dt>Pris</dt><dd>"+data.data.Pris+" kr ("+data.data.Volum+"l) "+data.data.Produktutvalg+" "+data.data.Butikkategori+"</dd>";
 		txt += "<dt>Fra</dt><dd>"+data.data.Produsent+", "+data.data.Land+", "+data.data.Distrikt+", "+data.data.Underdistrikt+"</dd>";
 		txt += "<dt>Beskrivelse</dt><dd>"+data.data.Farge+" "+data.data.Lukt+" "+data.data.Smak+"</dd>";
 		txt += "<dt>Lagring</dt><dd>Årgang: "+data.data.Argang+" "+data.data.Lagringsgrad+" "+data.data.Emballasjetype+" "+data.data.Korktype+"</dd>";
@@ -84,14 +85,14 @@ function loadProductsByType() {
 	}
 	$.getJSON(url, function(data) {
 		var txt = 
-					"<table class='table table-striped table-hover table-condensed'><thead><tr>"+
-					"<th><button class=sort data-sort=varenummer>#</button></th>"+
-					"<th><button class=sort data-sort=varetype>Type</button></th>"+
-					"<th><button class=sort data-sort=varenavn>Navn</button></th>"+
-					"<th><button class=sort data-sort=pris>Pris</button></th>"+
-					"<th><button class=sort data-sort=f_pris>Før</button></th>"+
-					"<th><button class=sort data-sort=diff>Diff</button></th>"+
-					"<th><button class=sort data-sort=volum>Vol</button></th>"+
+					"<table class='table table-responsive table-striped table-hover table-condensed'><thead><tr>"+
+					"<th><span class=sort data-sort=varenummer>Varenr.</span></th>"+
+//					"<th><span class=sort data-sort=varetype>Type</span></th>"+
+					"<th><span class=sort data-sort=varenavn>Navn</span></th>"+
+					"<th><span class=sort data-sort=pris>Pris</span></th>"+
+//					"<th><span class=sort data-sort=f_pris>Før</span></th>"+
+					"<th><span class=sort data-sort=diff>Diff</span></th>"+
+//					"<th><span class=sort data-sort=volum>Vol</span></th>"+
 					"</tr></thead><tbody class=list>";
 		var div = document.getElementById("products");
 		data.data.forEach(function(row) {
@@ -111,12 +112,12 @@ function loadProductsByType() {
 				butikk="<b>*</b>";
 
 			txt += 	"<tr><td class=varenummer><a href="+row.Vareurl+" target=_blank>"+row.Varenummer+"</a>"+butikk+
-					"</td><td class=varetype>"+row.Varetype+
+//					"</td><td class=varetype>"+row.Varetype+
 					"</td><td class=varenavn onclick='loadDetails("+row.Varenummer+")'>"+row.Varenavn+
-					"</td><td class=pris>"+row.pris+
-					"</td><td class=f_pris>"+row.f_pris+
+					"</td><td class=pris title='"+row.f_dato+": "+row.f_pris+" ("+row.Volum+"l)'>"+row.pris+
+//					"</td><td class=f_pris>"+row.f_pris+
 					"</td><td class=\""+diffClass+"\">"+diff+
-					"</td><td class=volum>"+row.Volum+
+//					"</td><td class=volum>"+row.Volum+
 					"</td></tr>";
 		});
 		txt += "</tbody></table><ul class=pagination></ul>";
