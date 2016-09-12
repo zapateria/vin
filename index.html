@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,41 +16,43 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/1.2.0/list.min.js"></script>
 <script src="list.pagination.min.js"></script>
-<script src="https://code.highcharts.com"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
 <script>
 
 var options = { 
-	valueNames: [ 'varenummer', 'varetype', 'varenavn','pris', 'f_pris', 'diff', 'volum' ], 
+	valueNames: [ 'datotid', 'varenummer', 'varetype', 'varenavn','pris', 'f_pris', 'diff', 'volum' ], 
 	page: 14, 
 	plugins: [ ListPagination({}) ]
  };
 
-
-/*
-$.getJSON("/api/vin", function(data) {
-	var div = document.getElementById("dbinfo");
-	var txt = '<small>Sist oppdatert: '+data.data[0]["Datotid"]+' <span class=badge>'+data.data[0]["antall"]+'</span> varer</small>';
-	div.innerHTML = txt;
-});
-*/
-
-$.getJSON("/api/vin/products/types", function(data) {
-	var div = document.getElementById("varetyper");
-
-	var txt = '<label for="selvaretype">Varegruppe</label><select placeholder="Varetype" class="form-control" id=selvaretype onchange="loadProductsByType()"><option value=null></option selected><option value="Alle varetyper">Alle varetyper</option>';
-	data.data.forEach(function(row) {
-		txt += "<option value=\""+row.Varetype+"\">"+row.Varetype+" ("+row.antall+")</option>";		
+function loadInfo() {
+	$.getJSON("/api/vin", function(data) {
+		var div = document.getElementById("dbinfo");
+		var txt = '<small>Sist oppdatert: '+data.data[0]["Datotid"]+' <span class=badge>'+data.data[0]["antall"]+'</span> varer med <em>'+data.data[0]["historikk"]+'</em> prisjusteringer</small>';
+		div.innerHTML = txt;
 	});
-	txt += '</select>';
+}
 
-	div.innerHTML=txt;
-});
+function loadTypes() {
+
+	$.getJSON("/api/vin/products/types", function(data) {
+		var div = document.getElementById("varetyper");
+
+		var txt = '<select placeholder="Varetype" class="form-control" id=selvaretype onchange="loadProductsByType()"><option value=null></option selected><option value="Alle varetyper">Alle varetyper</option>';
+		data.data.forEach(function(row) {
+			txt += "<option value=\""+row.Varetype+"\">"+row.Varetype+" ("+row.antall+")</option>";		
+		});
+		txt += '</select>';
+
+		div.innerHTML=txt;
+	});
+}
+
 
 function loadDetails(varenummer) {
 
 	var div = document.getElementById("details");
 	var txt = "";
-
 
 	$.getJSON("/api/vin/product/"+varenummer, function(data) {
 		txt += "<table class=table><tr><td><img src=https://bilder.vinmonopolet.no/cache/300x300-0/"+data.data.Varenummer+"-1.jpg></td>";
@@ -64,11 +64,37 @@ function loadDetails(varenummer) {
 		txt += "<dt>Fra</dt><dd>"+data.data.Produsent+", "+data.data.Land+", "+data.data.Distrikt+", "+data.data.Underdistrikt+"</dd>";
 		txt += "<dt>Beskrivelse</dt><dd>"+data.data.Farge+" "+data.data.Lukt+" "+data.data.Smak+"</dd>";
 		txt += "<dt>Lagring</dt><dd>Årgang: "+data.data.Argang+" "+data.data.Lagringsgrad+" "+data.data.Emballasjetype+" "+data.data.Korktype+"</dd>";
-		txt += "</dl></div></td></tr></table>";
+		txt += "</dl></div><div id=priceHistory></div><div id=priceChart></div></td></tr></table>";
 		div.innerHTML = txt;
-		
-	});
 
+		$.getJSON("/api/vin/product/"+varenummer+"/price", function(data) {
+			var price = document.getElementById("priceHistory");
+			var p = "<dl class='dl-horizontal'>";
+
+			var chart = { datoer: [ ], priser: [ ] };
+	
+			data.data.forEach(function(r) {
+				p += "<dt>"+r.Datotid+"</dt><dd>"+r.Pris+"</dd>";
+				chart.datoer.push(r.Datotid);
+				chart.priser.push(parseInt(r.Pris));
+			});			
+
+			p += "</dl>"
+
+//			price.innerHTML = p;
+
+			$("#priceChart").highcharts({
+				chart: { width: 600, height: 200 },
+				title: { text: 'Prishistorikk' },
+				xAxis: { categories: chart.datoer },
+				yAxis: { title: { text: 'NOK' } },
+				series: [ { name: 'Pris', data: chart.priser } ]
+			});
+
+
+		});
+
+	});
 }
 
 
@@ -89,6 +115,7 @@ function loadProductsByType() {
 					"<th><span class=sort data-sort=varenummer>Varenr.</span></th>"+
 //					"<th><span class=sort data-sort=varetype>Type</span></th>"+
 					"<th><span class=sort data-sort=varenavn>Navn</span></th>"+
+					"<th><span class=sort data-sort=datotid>Dato</span></th>"+
 					"<th><span class=sort data-sort=pris>Pris</span></th>"+
 //					"<th><span class=sort data-sort=f_pris>Før</span></th>"+
 					"<th><span class=sort data-sort=diff>Diff</span></th>"+
@@ -96,8 +123,8 @@ function loadProductsByType() {
 					"</tr></thead><tbody class=list>";
 		var div = document.getElementById("products");
 		data.data.forEach(function(row) {
-			var diffClass;
-			var diff = Math.floor(row.pris-row.f_pris);
+			var diffClass = "diff";
+			var diff = row.diff; //Math.floor(row.pris-row.f_pris);
 			if (diff < -10) diffClass="diff bg-success";
 			if (diff > 10) diffClass="diff bg-danger";
 			
@@ -114,9 +141,10 @@ function loadProductsByType() {
 			txt += 	"<tr><td class=varenummer><a href="+row.Vareurl+" target=_blank>"+row.Varenummer+"</a>"+butikk+
 //					"</td><td class=varetype>"+row.Varetype+
 					"</td><td class=varenavn onclick='loadDetails("+row.Varenummer+")'>"+row.Varenavn+
+					"</td><td class=datotid>"+row.Datotid+
 					"</td><td class=pris title='"+row.f_dato+": "+row.f_pris+" ("+row.Volum+"l)'>"+row.pris+
 //					"</td><td class=f_pris>"+row.f_pris+
-					"</td><td class=\""+diffClass+"\">"+diff+
+					"</td><td class=\""+diffClass+"\">"+row.diff+
 //					"</td><td class=volum>"+row.Volum+
 					"</td></tr>";
 		});
@@ -130,12 +158,12 @@ function loadProductsByType() {
 <title>Vinbase</title>
 </head>
 
-<body>
+<body onload="loadTypes(); loadInfo();">
 	<div class="container" id=vinliste>
 		<div class="panel panel-default">
 			<div class="panel-heading">
 				<h3>Vin og slik</h3>
-				<span id=dbinfo_></span>
+				<span id=dbinfo></span>
 				<div class="form-inline">
 					<span id=varetyper></span>
 					<input type="search" class="search input form-control" placeholder="Søk" />
